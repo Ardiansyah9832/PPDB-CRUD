@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -80,7 +81,8 @@ class UserController extends Controller
      */
     public function edit($id)
     {
-        //
+        $users = User::find($id);
+        return view('user.edit', compact('users'));
     }
 
     /**
@@ -92,7 +94,30 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $id, // Pastikan email unik kecuali milik pengguna ini
+            'role' => 'required',
+            'password' => 'nullable|string|min:6', // Password tidak wajib diisi
+        ]);
+    
+        // Cari pengguna berdasarkan ID
+        $user = User::findOrFail($id);
+    
+        // Update data pengguna
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->role = $request->role;
+    
+        // Jika password diisi, hash password baru, jika tidak, biarkan password lama tetap digunakan
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password); // Update password jika diisi
+        }
+    
+        // Simpan perubahan ke database
+        $user->save();
+    
+        return redirect()->route('user.index')->with('success', 'Data pengguna berhasil diubah');
     }
 
     /**
@@ -103,6 +128,7 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        //
-    }
+        User::where('id', $id)->delete();
+        return redirect()->back()->with('deleted', 'Data pengguna berhasil dihapus');
+        }
 }
